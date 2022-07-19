@@ -1,1 +1,1 @@
-University project from NLP
+NLP University Project

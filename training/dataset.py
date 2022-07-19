@@ -11,27 +11,28 @@ COLUMNS = ["Radnja", "Rezija", "Gluma",
 
 SUPPORTED_FILE_TYPES = [".csv", ".tsv"]
 
-
 class Dataset():
-    def __init__(self, files: List[Path], exclude_value: Optional[str]):
+    def __init__(self, files: List[Path], exclude_value: Optional[str], 
+                 label_names: List[str] = COLUMNS):
         """Constructor for dataset class.
 
         Args:
             files (List[Path]): paths to the .csv files containing parts of annotated dataset.
         """
+        self.label_names = label_names
         text_container: List[pd.DataFrame] = []
         label_container: List[pd.DataFrame] = []
 
         for file in files:
             assert file.exists(), f"Provided file: {file} doesn't exist"
-            texts, labels = self._read_labels_from_csv(file, exclude_value)
+            texts, labels = self._read_data_from_file(file, exclude_value)
             text_container.append(texts)
             label_container.append(labels)
 
         self.text = pd.concat(text_container)
         self.labels = pd.concat(label_container)
 
-    def _read_labels_from_csv(self, file_path: Path,
+    def _read_data_from_file(self, file_path: Path,
                               exclude_value: Optional[str] = "None") -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Read texts and labels corresponding to them.
         Args:
@@ -39,12 +40,12 @@ class Dataset():
             exclude_value (str): exclude rows where all columns have this value
         """
         assert file_path.suffix in SUPPORTED_FILE_TYPES, \
-            f"Provided file extension {file_path.suffix} is unsupported"
+            f"Provided file extension: {file_path.suffix} is unsupported"
 
         data = pd.read_csv(file_path)
-        labels = data[COLUMNS]
+        labels = data[self.label_names]
         texts = data[["text"]]
-        valid_indices = self.filter_rows_based_on_value(labels, exclude_value)
+        valid_indices = self.index_rows_based_on_value(labels, exclude_value)
 
         labels = labels[valid_indices]
         texts = texts[valid_indices]
@@ -52,7 +53,7 @@ class Dataset():
         return texts, labels
 
     @staticmethod
-    def filter_rows_based_on_value(data: pd.DataFrame,
+    def index_rows_based_on_value(data: pd.DataFrame,
                                    exclude_value: str) -> List[bool]:
         """Return bool array which will have valu
 
@@ -71,3 +72,7 @@ class Dataset():
         indices = np.all(comparasion, axis=1)
 
         return np.invert(indices).tolist()
+    
+    def to_numpy(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Return text and labels as numpy array."""
+        return self.text.to_numpy(), self.labels.to_numpy()
