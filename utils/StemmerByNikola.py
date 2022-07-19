@@ -430,9 +430,3 @@ def stem_str(str):
     for word in lam:
         end_str = end_str+" "+word
     return end_str
-        
-out = stem_arr("Jovica je išao u školu. Marija je dobra devojka.")
-out2 = stem_str("Jovica je išao u školu. Marija je dobra devojka.")
-
-print (out)
-print (out2)

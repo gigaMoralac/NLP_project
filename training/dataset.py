@@ -75,4 +75,4 @@ class Dataset():
     
     def to_numpy(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return text and labels as numpy array."""
-        return self.text.to_numpy(), self.labels.to_numpy()
+        return self.text.to_numpy().flatten(), self.labels.to_numpy()
