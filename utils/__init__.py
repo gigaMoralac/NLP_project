@@ -1,0 +1,1 @@
+from .StemmerByNikola import stem_str
