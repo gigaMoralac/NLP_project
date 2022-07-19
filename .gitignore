@@ -2,7 +2,7 @@
 __pycache__/
 
 # vscode
-.vscode
+.vscode/
 
 # Distribution / packaging
 *.egg/
