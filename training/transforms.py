@@ -15,7 +15,7 @@ CYR_TO_LAT_MAPPING = {'а':'a', 'б':'b', 'в':'v', 'г':'g', 'д':'d',
      'с':'s', 'т':'t', 'ћ':'ć', 'у':'u', 'ф':'f',
      'х':'h', 'ц':'c', 'џ':'y', 'ш':'š'}
 
-class CyrToLat:
+class CyrToLat():
     def __init__(self, mapping: Dict[str, str] = CYR_TO_LAT_MAPPING):
         """Constructor.
         
@@ -42,7 +42,7 @@ class CyrToLat:
 
         return input_data
 
-class StemSerbian:
+class StemSerbian():
     def __init__(self):
         """Constructor."""
 
@@ -61,7 +61,7 @@ class StemSerbian:
 
         return input_data
 
-class RemovePunctuation:
+class RemovePunctuation():
     def __init__(self):
         """Constructor."""
     
