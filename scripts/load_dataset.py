@@ -1,12 +1,9 @@
 import argparse
-from typing import Any, List
 from pathlib import Path
 
-from training.dataset import Dataset
 from training.trainer import Trainer
 from pathlib import Path
 from training.transforms import (StemSerbian, Transform, RemovePunctuation, CyrToLat, RemoveStopWords)
-import numpy as np
 
 data_path = Path("./dataset.csv")
 
