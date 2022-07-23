@@ -16,19 +16,17 @@ def add_training_arguments(parser: argparse.ArgumentParser):
     parser.add_argument("--data_paths", nargs="+", type=Path)
     parser.add_argument("--transformations", nargs="+", type=str)
     parser.add_argument("--exclude_value", type=str, default="None")
-
-
+    parser.add_argument("--model", type=str)
 
 if __name__ == "__main__":
-
 
     transformations = Transform([CyrToLat, RemovePunctuation, RemoveStopWords, StemSerbian])
     parser = argparse.ArgumentParser()
     add_training_arguments(parser)
     args = parser.parse_args()
     trainer = Trainer(args)
-
-    a = 1
+    trainer.fit()
+    trainer.predict(trainer._features)
 
 
 
