@@ -25,8 +25,10 @@ if __name__ == "__main__":
     add_training_arguments(parser)
     args = parser.parse_args()
     trainer = Trainer(args)
-    trainer.fit()
-    trainer.predict(trainer._features)
+    trainer.run_training()
+    trainer.run_inference()
+
+    a = 1
 
 
 
