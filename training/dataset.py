@@ -5,8 +5,7 @@ from typing import List, Tuple, Optional
 import numpy as np
 import pandas as pd
 
-COLUMNS = ["Radnja", "Rezija", "Gluma",
-           "Muzika", "Opsti utisak film",
+COLUMNS = ["Opsti utisak film", "Radnja", "Rezija", "Gluma","Muzika",
            "Opsti utisak komentar", "Specijalni efekti"]
 
 SUPPORTED_FILE_TYPES = [".csv", ".tsv"]

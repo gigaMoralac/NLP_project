@@ -17,6 +17,7 @@ def add_training_arguments(parser: argparse.ArgumentParser):
     parser.add_argument("--transformations", nargs="+", type=str)
     parser.add_argument("--exclude_value", type=str, default="None")
     parser.add_argument("--model", type=str)
+    parser.add_argument("--hyperparam_range", nargs=2, metavar=("min", "max"), type=float)
 
 if __name__ == "__main__":
 
@@ -25,8 +26,7 @@ if __name__ == "__main__":
     add_training_arguments(parser)
     args = parser.parse_args()
     trainer = Trainer(args)
-    trainer.run_training()
-    trainer.run_inference()
+    trainer.run_cross_validation()
 
     a = 1
 
