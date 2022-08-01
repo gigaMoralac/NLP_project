@@ -44,10 +44,10 @@ class Dataset():
         data = pd.read_csv(file_path)
         labels = data[self.label_names]
         texts = data[["text"]]
-        valid_indices = self.index_rows_based_on_value(labels, exclude_value)
-
-        labels = labels[valid_indices]
-        texts = texts[valid_indices]
+        if exclude_value is not None:
+            valid_indices = self.index_rows_based_on_value(labels, exclude_value)
+            labels = labels[valid_indices]
+            texts = texts[valid_indices]
 
         return texts, labels
 

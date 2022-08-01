@@ -1,4 +1,5 @@
 """Aspect and sentiment analysis training."""
+from abc import ABCMeta
 import argparse
 from typing import Any, Dict, List, Optional, NamedTuple
 from pathlib import Path
@@ -14,9 +15,10 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import SVC
 from training.dataset import COLUMNS
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import StratifiedKFold
+
 
 class CrossValidation:
     def __init__(self, column: str, X: np.ndarray, y: np.ndarray, model_class: object, hyperparameter: Dict[str, List[float]]):
@@ -48,12 +50,13 @@ class CrossValidation:
         self._store_plot()
 
     def _store_plot(self):
-        self.figure = plt.figure();
+        self.figure = plt.figure()
         metrics = np.array(self._metrics)
         plt.plot(metrics[:, 0], metrics[:, 1])
         plt.xlabel(self.hyperparam_name)
         plt.ylabel("F1")
         plt.title(f"{self._model_class.__name__} : {self._column}")
+        plt.close()
 
 
 class Split(NamedTuple):
@@ -62,7 +65,7 @@ class Split(NamedTuple):
     train_labels: np.ndarray
     test_labels: np.ndarray
 
-class Trainer():
+class AbstractTrainer(metaclass=ABCMeta):
     """Trainer class for aspect sentiment analysis."""
     def __init__(self, args: argparse.Namespace):
         """Constructor.
@@ -73,7 +76,8 @@ class Trainer():
         self._args = args
         self._embedding_choice = {"bag_of_words": {"embedder": CountVectorizer,
                                   "embedder_kwargs": {"ngram_range": [args.ngrams, args.ngrams],
-                                                             "binary": args.binary}}}
+                                                      "binary": args.binary,
+                                                      "max_features": args.max_features}}}
 
         self._transformer_choice = {"stem": StemSerbian, "remove_punct": RemovePunctuation,
                                     "cyr_to_lat": CyrToLat, "stop_words": RemoveStopWords}
@@ -87,7 +91,6 @@ class Trainer():
         self._select_transformer()
         self.transform_dataset()
         self._fit_embedder()
-        self._select_model()
         self._split_dataset()
 
     def _load_dataset(self, data_paths: List[Path], exclude_value: str) -> None:
@@ -128,16 +131,8 @@ class Trainer():
         transformed_dataset = self._transformer(self.dataset)
         self._dataset = transformed_dataset
     
-    def _select_model(self):
-        self._model_dict = {column: self._model_choice[self._args.model]() for column in COLUMNS}
-    
-    # def fit(self) -> None:
-    #     _, labels_np = self.dataset.to_numpy()
-    #     for i, column in tqdm(enumerate(COLUMNS)):
-    #         labels_column = labels_np[:, i]
-    #         labels_column = (labels_column != "None").astype(int)
-    #         self._model_dict[column].fit(self._features, labels_column)
-    #         print(f"Model trained for class: {column}")
+    def _select_model(self, hyperparam_kwargs):
+        self._model_dict = {column: self._model_choice[self._args.model](**hyperparam_kwargs[column]) for column in COLUMNS}
     
     def predict(self, features:np.ndarray) -> np.ndarray:
         predictions = []
@@ -155,24 +150,22 @@ class Trainer():
 
         for i, column in tqdm(enumerate(COLUMNS)):
             labels_column = labels_np[:, i]
-            labels_column = (labels_column != "None").astype(int)
-            labels_column = labels_column
-            features_train, features_test, labels_train, labels_test = train_test_split(self._features, labels_column, test_size=0.2, stratify=labels_column)
-            self._splits[column] = Split(features_train, features_test, labels_train, labels_test)
+            labels_column = np.array([self._mapping_to_labels[label] for label in labels_column])
+            valid_indices = labels_column != None
+            features_train, features_test, labels_train, labels_test = train_test_split(self._features[valid_indices],
+                                                                                        labels_column[valid_indices],
+                                                                                        test_size=0.2,
+                                                                                        stratify=labels_column[valid_indices])
+            self._splits[column] = Split(features_train, features_test, labels_train.astype(np.float32), labels_test.astype(np.float32))
 
-    # def run_training(self) -> None:
-    #     # split into train and test dataset
-    #     self._splits: Dict[str, Split] = {}
-    #     _, labels_np = self.dataset.to_numpy()
+    def run_training(self) -> None:
+        # split into train and test dataset
+        hyperparams_per_class = {column: {self._hyparameter_choice[self._args.model]: self._cvs[column].best_hyperparam} for column in COLUMNS}
+        self._select_model(hyperparams_per_class)
+        for column in self._splits.keys():
 
-    #     for i, column in tqdm(enumerate(COLUMNS)):
-    #         labels_column = labels_np[:, i]
-    #         labels_column = (labels_column != "None").astype(int)
-    #         labels_column = labels_column
-    #         features_train, features_test, labels_train, labels_test = train_test_split(self._features, labels_column, test_size=0.3, stratify=labels_column)
-    #         self._model_dict[column].fit(features_train, labels_train)
-    #         self._splits[column] = Split(features_train, features_test, labels_train, labels_test)
-    #         print(f"Model trained for class: {column}")
+            self._model_dict[column].fit(self._splits[column].train_features, self._splits[column].train_labels)
+            print(f"Model trained for class: {column}")
 
     def run_inference(self) -> None:
 
@@ -181,8 +174,8 @@ class Trainer():
             test_features = self._splits[column].test_features
             test_labels = self._splits[column].test_labels
             self._scores[column] = {}
-            self._scores[column]["accuracy"] = self._model_dict[column].score(test_features, test_labels)
             pred_labels = self._model_dict[column].predict(test_features)
+            self._scores[column]["f1_score"] = f1_score(test_labels, pred_labels, average=self._f1_averaging)
             self._scores[column]["confusion_matrix"] = confusion_matrix(test_labels, pred_labels)
     
     def run_cross_validation(self):
