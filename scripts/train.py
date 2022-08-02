@@ -1,10 +1,10 @@
+"""Train aspect and sentiment model."""
 import argparse
 from pathlib import Path
 
 from training.trainers import SentimentTrainer, AspectTrainer, JointTrainer
 from pathlib import Path
 from training.transforms import (StemSerbian, Transform, RemovePunctuation, CyrToLat, RemoveStopWords)
-data_path = Path("./dataset.csv")
 
 def add_training_arguments(parser: argparse.ArgumentParser):
     
@@ -25,14 +25,8 @@ if __name__ == "__main__":
     add_training_arguments(parser)
     args = parser.parse_args()
     trainer = SentimentTrainer(args)
-    trainer.run_cross_validation()
-    trainer.run_training()
-    trainer.run_inference()
-
-    a = 1
-
-
-
+    trainer.run_pipeline()
+    
 
 
 
