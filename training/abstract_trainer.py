@@ -1,23 +1,26 @@
 """Aspect and sentiment analysis training."""
-from abc import ABCMeta
 import argparse
-from typing import Any, Dict, List, Optional, NamedTuple
+import logging
+from abc import ABCMeta
 from pathlib import Path
+from typing import Any, Dict, List, NamedTuple
+
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from sklearn.pipeline import Pipeline
-from training.dataset import Dataset
-from training.transforms import (StemSerbian, Transform, RemovePunctuation, CyrToLat, RemoveStopWords)
 from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.svm import SVC
-from training.dataset import COLUMNS
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, f1_score
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import (StratifiedKFold, cross_val_score,
+                                     train_test_split)
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+from sklearn.svm import SVC
+from tqdm import tqdm
+from utils.pathutils import create_dir_hierarchy
+
+from training.dataset import COLUMNS, Dataset
+from training.transforms import (CyrToLat, RemovePunctuation, RemoveStopWords,
+                                 StemSerbian, Transform)
 
 
 class CrossValidation:
@@ -131,18 +134,8 @@ class AbstractTrainer(metaclass=ABCMeta):
         transformed_dataset = self._transformer(self.dataset)
         self._dataset = transformed_dataset
     
-    def _select_model(self, hyperparam_kwargs):
+    def _init_models(self, hyperparam_kwargs):
         self._model_dict = {column: self._model_choice[self._args.model](**hyperparam_kwargs[column]) for column in COLUMNS}
-    
-    def predict(self, features:np.ndarray) -> np.ndarray:
-        predictions = []
-        for column in COLUMNS:
-            pred = self._model_dict[column].predict(features)
-            predictions.append(pred)
-        
-        predictions = np.array(predictions).T
-
-        return predictions
     
     def _split_dataset(self) -> None:
         self._splits: Dict[str, Split] = {}
@@ -161,11 +154,17 @@ class AbstractTrainer(metaclass=ABCMeta):
     def run_training(self) -> None:
         # split into train and test dataset
         hyperparams_per_class = {column: {self._hyparameter_choice[self._args.model]: self._cvs[column].best_hyperparam} for column in COLUMNS}
-        self._select_model(hyperparams_per_class)
+        self._init_models(hyperparams_per_class)
         for column in self._splits.keys():
 
             self._model_dict[column].fit(self._splits[column].train_features, self._splits[column].train_labels)
-            print(f"Model trained for class: {column}")
+            pred_labels = self._model_dict[column].predict(self._splits[column].train_features)
+            logging.info(f"Model trained for class: {column}")
+            score = f1_score(self._splits[column].train_labels, pred_labels, average=self._f1_averaging)
+            confusion_mat = confusion_matrix(self._splits[column].train_labels, pred_labels)
+            logging.info(f"Train score: {score}")
+            logging.info(f"Confusion_matrix: \n{confusion_mat}")
+            
 
     def run_inference(self) -> None:
 
@@ -174,19 +173,67 @@ class AbstractTrainer(metaclass=ABCMeta):
             test_features = self._splits[column].test_features
             test_labels = self._splits[column].test_labels
             self._scores[column] = {}
+            logging.info(f"Model inference for class: {column}")
             pred_labels = self._model_dict[column].predict(test_features)
-            self._scores[column]["f1_score"] = f1_score(test_labels, pred_labels, average=self._f1_averaging)
-            self._scores[column]["confusion_matrix"] = confusion_matrix(test_labels, pred_labels)
+            score = f1_score(test_labels, pred_labels, average=self._f1_averaging)
+            confusion_mat = confusion_matrix(test_labels, pred_labels)
+
+            logging.info(f"Test score : {score}")
+            logging.info(f"Confusion matrix on test set: \n{confusion_mat}")
+
+            self._scores[column]["f1_score"] = score
+            self._scores[column]["confusion_matrix"] = confusion_mat
     
     def run_cross_validation(self):
+        self._dirs.log_cv.mkdir(parents=True, exist_ok=True)
         self._cvs: Dict[str, CrossValidation] = {column : None for column in COLUMNS}
         for column in COLUMNS:
             features = self._splits[column].train_features
             labels = self._splits[column].train_labels
             hyperparam_dict = {self._hyparameter_choice[self._args.model] : self._hyperparam_values}
             cv = CrossValidation(column, features, labels, self._model_choice[self._args.model], hyperparam_dict)
+            logging.info(f"cross validating for class: {column}")
             cv.run()
+            logging.info(f"cross_validating for class {column} completed")
+            logging.info(f"Optimal value of parameter {cv.hyperparam_name}: {cv.best_hyperparam}")
+            logging.info(f"Optimal metric value: {cv.best_metric}")
+
+            # saving plot image
+            figure_name = f"{column}.png"
+            cv.figure.savefig(self._dirs.log_cv / figure_name) 
+            logging.info(f"cross validation graph saved to {str(self._dirs.log_cv / figure_name)}")
             self._cvs[column] = cv
+    
+    def run_pipeline(self):
+        """Runs the whole training, validation and evaluation pipeline."""
+        self._dirs = create_dir_hierarchy()
+        self._dirs.log_dir.mkdir(parents=True, exist_ok=True)
+        logging.basicConfig(filename=self._dirs.log_dir / "log.log", level=logging.INFO)
+        logging.info(f"trainer_type : {self.__class__.__name__}")
+        logging.info(f"model: {self._args.model}")
+
+        logging.info("Cross-Validation started")
+
+        self.run_cross_validation()
+
+        logging.info("Cross-Validation finished")
+
+        logging.info("Training started")
+        self.run_training()
+        logging.info("Training finished")
+
+        logging.info("Inference started")
+        self.run_inference()
+        logging.info("Inference finished")
+
+
+
+
+
+
+        
+
+
 
 
 

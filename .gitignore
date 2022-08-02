@@ -7,3 +7,6 @@ __pycache__
 # Distribution / packaging
 *.egg/
 *.egg-info/
+
+#training
+logs/
