@@ -7,6 +7,7 @@ from pathlib import Path
 LOG_PATH = Path("./logs")
 
 def create_dir_hierarchy() -> argparse.Namespace:
+    """Create directory hierarchy for storing training results."""
     current_date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     dir_kwargs: Dict[str, Path] = {}
     log_dir = LOG_PATH / current_date
