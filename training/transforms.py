@@ -1,14 +1,13 @@
-"""Transformation calsses."""
-from pathlib import Path
+"""Transformation classes."""
 import string
+from pathlib import Path
 from typing import Callable, Dict, List
 
-import pandas as pd
 import numpy as np
-
-from training.dataset import Dataset
+import pandas as pd
 from utils.StemmerByNikola import stem_str
 
+from training.dataset import Dataset
 
 CYR_TO_LAT_MAPPING = {'а':'a', 'б':'b', 'в':'v', 'г':'g', 'д':'d',
      'ђ':'đ', 'е':'e', 'ж':'ž', 'з':'z', 'и':'i',
@@ -21,6 +20,7 @@ STOP_WORD_DICT_PATH = Path("./assets/stop_words_serbian.txt")
 
 
 class CyrToLat():
+    """Convert cyrilic text to latin."""
     def __init__(self, mapping: Dict[str, str] = CYR_TO_LAT_MAPPING):
         """Constructor.
  
@@ -49,6 +49,7 @@ class CyrToLat():
 
 
 class StemSerbian():
+    """Stem serbian text."""
     def __init__(self):
         """Constructor."""
 
@@ -69,6 +70,7 @@ class StemSerbian():
 
 
 class RemovePunctuation():
+    """Remove punctuation from dataset."""
     def __init__(self):
         """Constructor."""
 
