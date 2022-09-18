@@ -32,21 +32,7 @@ if __name__ == "__main__":
     add_training_arguments(parser)
     args = parser.parse_args()
     trainer_names = TRAINER_CHOICE[args.trainer_type]
-    nlp_trainers = []
 
     for trainer_name in trainer_names:
         current_trainer = getattr(trainers, trainer_name)(args)
         current_trainer.run_pipeline()
-        nlp_trainers.append(current_trainer)
-
-    
-
-
-
-
-
-    
-
-
-    
-

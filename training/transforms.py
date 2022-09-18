@@ -19,6 +19,21 @@ CYR_TO_LAT_MAPPING = {'а':'a', 'б':'b', 'в':'v', 'г':'g', 'д':'d',
 STOP_WORD_DICT_PATH = Path("./assets/stop_words_serbian.txt")
 
 
+class ToLower():
+    """Callable class for lowercase conversion."""
+    def __init__(self):
+        """Constructor."""
+    
+    def __call__(self, input_data: Dataset) -> Dataset:
+        """Convert dataset text to all lowercase letters."""
+        text_np, _ = input_data.to_numpy()
+        lowercase_text = [lines.lower() for lines in text_np]
+
+        out = pd.DataFrame(data=lowercase_text, columns=["text"])
+        input_data.text = out
+
+        return input_data
+
 class CyrToLat():
     """Convert cyrilic text to latin."""
     def __init__(self, mapping: Dict[str, str] = CYR_TO_LAT_MAPPING):
@@ -97,7 +112,7 @@ class RemoveStopWords():
         Args:
             stopwords_path (Path): Path to stop-words dictionary.
         """
-        self.stopword_list = np.loadtxt(stopwords_path, dtype=str)
+        self.stopword_list = np.loadtxt(stopwords_path, dtype=str, encoding="utf8")
 
     def __call__(self, input_data: Dataset) -> Dataset:
         """Remove stop-words from input data.
@@ -108,7 +123,7 @@ class RemoveStopWords():
         text_np, _ = input_data.to_numpy()
         processed_text = []
         for lines in text_np:
-            segmented_line = [word for word in lines.lower().split() if word not in self.stopword_list]
+            segmented_line = [word for word in lines.split() if word not in self.stopword_list]
             segmented_line = " ".join(segmented_line)
             processed_text.append(segmented_line)
 
@@ -139,5 +154,3 @@ class Transform():
             data = t(data)
         
         return data
-
-
